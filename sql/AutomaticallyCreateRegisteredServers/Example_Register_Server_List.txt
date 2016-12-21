@@ -1,0 +1,24 @@
+[HR]
+HR_Server1
+HR_Server2
+
+[HR\REPORT]
+HR_RPT1
+HR_RPT2
+
+[HR\REPORT\AUDIT]
+MyServer 
+
+[Accounting]
+AC_Server1
+;AC_Server2 #comment out
+AC_Server3
+
+[Test]
+T_Server1
+T_Server2
+
+[DEV]
+Dev_1
+Dev_2
+Dev_3\Inst_1

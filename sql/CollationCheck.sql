@@ -1,0 +1,3 @@
+SELECT DATABASEPROPERTYEX('master', 'Collation') SQLCollation;
+
+SELECT DATABASEPROPERTYEX('TS_OLTP_PRDXXXX', 'Collation') SQLCollation;

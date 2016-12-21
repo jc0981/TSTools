@@ -1,0 +1,301 @@
+------------------------------------------------------------
+------------------------------------------------------------
+Declare @CorpID      INT
+Declare @StartDate   DATETIME
+Declare @EndDate     DATETIME
+DECLARE @Facilty	 INT
+
+------------------------------------------------------------
+SELECT @StartDate = CONVERT(char(4), DATEPART (yyyy, GetDate() ) ) + '-01-01'
+SELECT @EndDate   = GetDAte()
+SELECT @Facilty = 68
+------------------------------------------------------------
+SET NOCOUNT ON 
+
+
+CREATE TABLE #DEMOUPDATES  
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  NumofDemoUpdates INT
+
+)
+
+
+--drop table ##primary
+--create TABLE ##primary    
+
+--(
+
+--  Corpid int, 
+--  CorpName varchar(35),
+--  Userid varchar(50),
+--  Therpstkey int
+
+ 
+
+--)
+
+
+
+
+CREATE TABLE #DEMOACCESS   
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  LastDemoAccess Datetime
+
+)
+
+
+
+
+CREATE TABLE #NotesDocumented   
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  NumNotesDoc INT
+
+)
+
+
+
+CREATE TABLE #PTDOCACCESS   
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  LastNoteAccess Datetime
+
+)
+
+
+
+CREATE TABLE #Appointment   
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  AppointmentCount int
+
+)
+
+
+
+
+CREATE TABLE #AppointmentAccess   
+
+(
+
+  Corpid int, 
+  CorpName varchar(35),
+  Userid varchar(50),
+  Therpstkey int,
+  UsernameL VARCHAR(30),
+  Usernamef VARCHAR(30),
+  LastAppointmentAccess datetime
+
+)
+
+
+----PRINT  'Patient Registration / Demographics Updates'
+INSERT INTO #DEMOUPDATES (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,NumofDemoUpdates)
+SELECT ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF, [Num Updates] = COUNT(*)
+FROM PT11
+  JOIN ST02 on ST02.CorpID = PT11.CorpID
+  LEFT JOIN AT20 on AT20.CorpID  = PT11.CorpID 
+                and AT20.AT20UID = RIGHT(PT11ChgID, LEN(PT11ChgID) - CHARINDEX('\', PT11ChgID) )
+WHERE PT11.CorpID <> -1
+  AND PT11ChgDat BETWEEN @StartDate and @EndDate
+  AND PT11.OwnClinicKey = @Facilty --JC Added
+GROUP BY ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF
+
+
+
+----PRINT  'Patient Registration / Demographics Updates'
+
+INSERT INTO #DEMOACCESS (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,LastDemoAccess)
+SELECT ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF, [Most Recent Change] = MAX(PT11ChgDat)
+FROM PT11
+   JOIN ST02 on ST02.CorpID = PT11.CorpID
+   LEFT JOIN AT20 on AT20.CorpID  = PT11.CorpID 
+                 and AT20.AT20UID = RIGHT(PT11ChgID, LEN(PT11ChgID) - CHARINDEX('\', PT11ChgID) )
+WHERE PT11.CorpID <> -1
+  AND PT11ChgDat BETWEEN @StartDate and @EndDate
+  AND PT11.OwnClinicKey = @Facilty --JC Added  
+GROUP BY ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName, at20.Therpstkey,PT11ChgID, AT20NameL, AT20NameF
+
+------------------------------------------------------------
+------------------------------------------------------------
+------------------------------------------------------------
+--PRINT  'Patient Documentation'
+
+
+INSERT INTO #NotesDocumented (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,NumNotesDoc)
+SELECT ST02.CorpID, ST02.CorpName,AT20.TherpstKey, AT20UID, AT20NameL, AT20NameF, [Num Notes] = COUNT(*)
+FROM PT30
+   JOIN AT20 on AT20.CorpID     = PT30.CorpID 
+            AND AT20.TherpstKey = PT30.TherpstKey 
+   JOIN ST02 on ST02.CorpID     = PT30.CorpID
+WHERE PT30.CorpID <> -1 
+  AND PT30NotDat BETWEEN @StartDate and @EndDate
+  AND PT30.NOTETYPE IN (select notetype from lt30
+where lt30chgdoc=1) 
+  AND pt30.ClinicKey = @Facilty --JC Added
+GROUP BY ST02.CorpID, ST02.CorpName,AT20.TherpstKey, AT20UID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName,AT20.TherpstKey, AT20UID, AT20NameL, AT20NameF
+
+
+
+--PRINT  'Patient Documentation'
+INSERT INTO #PTDOCACCESS (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,LastNoteAccess)
+SELECT ST02.CorpID, ST02.CorpName,AT20.TherpstKey, AT20UID, AT20NameL, AT20NameF, [Most Recent Change] = MAX(PT30NotDat)
+FROM PT30
+   JOIN AT20 on AT20.CorpID     = PT30.CorpID 
+            AND AT20.TherpstKey = PT30.TherpstKey 
+   JOIN ST02 on ST02.CorpID     = PT30.CorpID
+WHERE PT30.CorpID <> -1
+  AND PT30NotDat BETWEEN @StartDate and @EndDate
+AND PT30.NOTETYPE IN (select notetype from lt30
+where lt30chgdoc=1) 
+  AND pt30.ClinicKey = @Facilty --JC Added
+GROUP BY ST02.CorpID, ST02.CorpName, AT20.TherpstKey,AT20UID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName, AT20.TherpstKey, AT20UID, AT20NameL, AT20NameF
+
+
+------------------------------------------------------------
+------------------------------------------------------------
+------------------------------------------------------------
+--PRINT  'Patient Scheduling'
+INSERT INTO #Appointment (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,Appointmentcount)
+SELECT ST02.CorpID, ST02.CorpName, AT20.Therpstkey, PT15UID, AT20NameL, AT20NameF, [Num Appts] = COUNT(*)
+FROM PT15
+   JOIN ST02 on ST02.CorpID       = PT15.CorpID
+   LEFT JOIN AT20 on AT20.CorpID  = PT15.CorpID 
+                 and AT20.AT20UID = RIGHT(PT15UID, LEN(PT15UID) - CHARINDEX('\', PT15UID) )
+WHERE PT15.CorpID <> -1 
+  AND PT15ChgDat BETWEEN @StartDate and @EndDate
+  AND pt15.ClinicKey = @Facilty --JC Added
+GROUP BY ST02.CorpID, ST02.CorpName, AT20.Therpstkey, PT15UID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName, AT20.Therpstkey, PT15UID, AT20NameL, AT20NameF
+
+
+--PRINT  'Patient Scheduling'
+
+INSERT INTO #AppointmentAccess (Corpid,CorpName,Therpstkey,Userid,UsernameL,UsernameF,LastAppointmentAccess)
+SELECT ST02.CorpID, ST02.CorpName,AT20.TherpstKey, PT15UID, AT20NameL, AT20NameF, [Most Recent Change] = MAX(PT15ChgDat)
+FROM PT15
+   JOIN ST02 on ST02.CorpID       = PT15.CorpID
+   LEFT JOIN AT20 on AT20.CorpID  = PT15.CorpID 
+                 and AT20.AT20UID = RIGHT(PT15UID, LEN(PT15UID) - CHARINDEX('\', PT15UID) )
+WHERE PT15.CorpID <> -1 
+  AND PT15ChgDat BETWEEN @StartDate and @EndDate
+  AND pt15.ClinicKey = @Facilty --JC Added  
+GROUP BY ST02.CorpID, ST02.CorpName, AT20.TherpstKey,PT15UID, AT20NameL, AT20NameF
+ORDER BY ST02.CorpID, ST02.CorpName, AT20.TherpstKey, PT15UID, AT20NameL, AT20NameF
+
+
+
+SELECT
+	a.Userid as UserName
+	, a.Usernamef as FirstName
+	, a.UsernameL as LastName
+--Select a.Corpid , a.CorpName,a.Userid,
+--a.UsernameF FirstName,a.UsernameL LastName,isnull(a.NumofDemoUpdates,0) NumofDemoUpdates ,  CONVERT(VARCHAR(10), b.LastDemoAccess, 101)  as LastDemoAccess,
+--Isnull(c.NumNotesDoc,0) NumNotesDoc , CONVERT(VARCHAR(10), d.LastNoteAccess, 101) as LastNoteAccess  ,isnull(e.AppointmentCount,0) AppointmentCount , CONVERT(VARCHAR(10), f.LastAppointmentAccess, 101) as LastAppointmentAccess
+from #DEMOUPDATES a full outer join #DEMOACCESS b 
+on a.corpid = b.corpid and a.userid=b.userid
+full outer join #NotesDocumented c on 
+a.corpid = c.corpid and a.Therpstkey=c.Therpstkey
+full outer join   #PTDOCACCESS d
+on a.corpid = d.corpid and a.Therpstkey=d.Therpstkey
+full outer join   #Appointment e
+on a.corpid = e.corpid and a.userid=e.userid
+full outer join   #AppointmentAccess f
+on a.corpid = f.corpid and a.userid=f.userid
+where a.corpid is not null 
+order by a.corpid ,a.userid
+
+--insert into ##primary
+--(
+--  Corpid , 
+--  Userid,
+--  Therpstkey
+--)
+--Select a.Corpid , a.Userid , a.Therpstkey
+--from #DEMOUPDATES a full outer join #DEMOACCESS b 
+--on a.corpid = b.corpid and a.userid=b.userid
+--full outer join #NotesDocumented c on 
+--a.corpid = c.corpid and a.Therpstkey=c.Therpstkey
+--full outer join   #PTDOCACCESS d
+--on a.corpid = d.corpid and a.Therpstkey=d.Therpstkey
+--full outer join   #Appointment e
+--on a.corpid = e.corpid and a.userid=e.userid
+--full outer join   #AppointmentAccess f
+--on a.corpid = f.corpid and a.userid=f.userid
+--where a.corpid is not null 
+--order by a.corpid ,a.userid
+
+
+
+drop table #DEMOUPDATES
+drop table #NotesDocumented
+drop table #DEMOACCESS
+drop table #PTDOCACCESS
+drop table #Appointment
+drop table #AppointmentAccess
+
+
+/*  Actual query used 12/22/2015
+
+
+select distinct --*
+  a.AT20NameF as FirstName
+  , a.AT20NameL as LastName
+  , a.AT20UID as UserID
+  , b.ClinicKey as FacilityID
+  , c.AT11Name as FacilityName
+from AT20 a
+join AT21 b on a.TherpstKey = b.TherpstKey
+join AT11 c on b.ClinicKey = c.ClinicKey
+where a.AT20Active = 1
+AND b.ClinicKey in (65
+,66
+,64
+,61
+,59
+,68)
+
+
+
+*/
